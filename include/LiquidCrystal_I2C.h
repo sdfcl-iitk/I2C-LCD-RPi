@@ -1,13 +1,19 @@
 #pragma once
 
+#include <cstdint>
 #include <cinttypes>
 #include <cstring>
 
 extern "C" {
-	#include <unistd.h>
+    #include <stdint.h>
+    #include <unistd.h>
+    #include <fcntl.h>
+    #include <linux/i2c-dev.h>
+    #include <i2c/smbus.h>
+    #include <sys/ioctl.h>
 }
 
-#include "i2c-utils.h"
+// #include "i2c-utils.h"
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
@@ -73,7 +79,8 @@ public:
 	 * @param lcd_rows	Number of rows your LCD display has.
 	 * @param charsize	The size in dots that the display has, use LCD_5x10DOTS or LCD_5x8DOTS.
 	 */
-	LiquidCrystal_I2C(const I2CUtils &i2c, uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows, uint8_t charsize = LCD_5x8DOTS);
+	LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows, uint8_t charsize = LCD_5x8DOTS);
+	~LiquidCrystal_I2C();
 
 	/**
 	 * Set the LCD display in the correct begin state, must be called before anything else is done.
@@ -157,7 +164,7 @@ private:
 	void write4bits(uint8_t);
 	void expanderWrite(uint8_t);
 	void pulseEnable(uint8_t);
-	const I2CUtils &i2c;
+	int i2c_bus;
 	uint8_t _addr;
 	uint8_t _displayfunction;
 	uint8_t _displaycontrol;

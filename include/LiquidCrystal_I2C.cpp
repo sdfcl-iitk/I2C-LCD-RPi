@@ -21,13 +21,21 @@
 // can't assume that its in that state when a sketch starts (and the
 // LiquidCrystal constructor is called).
 
-LiquidCrystal_I2C::LiquidCrystal_I2C(const I2CUtils &i2c, uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows, uint8_t charsize) : i2c(i2c)
+LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows, uint8_t charsize)
 {
 	_addr = lcd_addr;
 	_cols = lcd_cols;
 	_rows = lcd_rows;
 	_charsize = charsize;
 	_backlightval = LCD_BACKLIGHT;
+
+	i2c_bus = open("/dev/i2c-1", O_RDWR);
+	ioctl(i2c_bus, I2C_SLAVE, _addr);
+}
+
+LiquidCrystal_I2C::~LiquidCrystal_I2C() {
+	// close the bus
+	if (i2c_bus > 0) close(i2c_bus);
 }
 
 void LiquidCrystal_I2C::begin() {
@@ -45,11 +53,11 @@ void LiquidCrystal_I2C::begin() {
 	// SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!
 	// according to datasheet, we need at least 40ms after power rises above 2.7V
 	// before sending commands. Arduino can turn on way befer 4.5V so we'll wait 50
-	::sleep(50 / 1000);
+	// ::sleep(50 / 1000);
 
 	// Now we pull both RS and R/W low to begin commands
 	expanderWrite(_backlightval);	// reset expanderand turn backlight off (Bit 8 =1)
-	::sleep(1000 / 1000);
+	// ::sleep(1000 / 1000);
 
 	//put the LCD into 4 bit mode
 	// this is according to the hitachi HD44780 datasheet
@@ -57,15 +65,15 @@ void LiquidCrystal_I2C::begin() {
 
 	// we start in 8bit mode, try to set 4 bit mode
 	write4bits(0x03 << 4);
-	::sleep(4500 / 1e6); // wait min 4.1ms
+	// ::sleep(4500 / 1e6); // wait min 4.1ms
 
 	// second try
 	write4bits(0x03 << 4);
-	::sleep(4500 / 1e6); // wait min 4.1ms
+	// ::sleep(4500 / 1e6); // wait min 4.1ms
 
 	// third go!
 	write4bits(0x03 << 4);
-	::sleep(150 / 1e6);
+	// ::sleep(150 / 1e6);
 
 	// finally, set to 4-bit interface
 	write4bits(0x02 << 4);
@@ -92,12 +100,12 @@ void LiquidCrystal_I2C::begin() {
 /********** high level commands, for the user! */
 void LiquidCrystal_I2C::clear(){
 	command(LCD_CLEARDISPLAY);// clear display, set cursor position to zero
-	::sleep(2000 / 1e6);  // this command takes a long time!
+	// ::sleep(2000 / 1e6);  // this command takes a long time!
 }
 
 void LiquidCrystal_I2C::home(){
 	command(LCD_RETURNHOME);  // set cursor position to zero
-	::sleep(2000 / 1e6);  // this command takes a long time!
+	// ::sleep(2000 / 1e6);  // this command takes a long time!
 }
 
 void LiquidCrystal_I2C::setCursor(uint8_t col, uint8_t row){
@@ -226,18 +234,15 @@ void LiquidCrystal_I2C::expanderWrite(uint8_t _data){
 	uint8_t b = _data;
 	b = b | _backlightval;
 
-	i2c.write_byte(_addr, b);
-	// Wire.beginTransmission(_addr);
-	// Wire.write((int)(_data) | _backlightval);
-	// Wire.endTransmission();
+	i2c_smbus_write_byte(i2c_bus, b);
 }
 
 void LiquidCrystal_I2C::pulseEnable(uint8_t _data){
 	expanderWrite(_data | En);	// En high
-	::sleep(1 / 1e6);		// enable pulse must be >450ns
+	// ::sleep(1 / 1e6);		// enable pulse must be >450ns
 
 	expanderWrite(_data & ~En);	// En low
-	::sleep(50 / 1e6);		// commands need > 37us to settle
+	// ::sleep(50 / 1e6);		// commands need > 37us to settle
 }
 
 void LiquidCrystal_I2C::load_custom_character(uint8_t char_num, uint8_t *rows){
